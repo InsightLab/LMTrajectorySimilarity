@@ -1,0 +1,100 @@
+############### Usando o Server Cascavel - Quixadá ################
+
+<<<<>>>> PASSOS USADOS PARA TREINO & TESTE DO MODELO T2VEC <<<<>>>>
+
+1°. Liste os envs:
+$ conda env list
+
+2°. Crie um novo env (porto) clonando o env base:
+$ conda create --name porto --clone base
+Obs: Isto foi necessário para que o novo env carregasse os drivers corretos do Pytorch + CUDA!
+
+3°. Verifique se o env porto foi realmente criado:
+$ conda env list
+
+4°. Ative o env:
+$ conda activate porto
+
+5°. Verifique se o Pytorch e CUDA estão funcionando corretamente:
+$ python
+>>> import torch
+>>> print(torch.__version__)
+1.13.1+cu117
+>>> torch.cuda.is_available()
+True
+>>> exit()
+Obs: Se a saída for "True", significa que sim!
+
+6°. Instale a versão 1.18.5 do Numpy para evitar os erros de "inhomogeneous part" ou "VisibleDeprecationWarning":
+$ conda install numpy=1.18.5
+$ python
+>>> import numpy as np
+>>> print(np.__version__)
+1.18.5
+
+7°. Instale a linguagem Julia! Pode ser uma versão superior à 1.5, e.x:
+$ conda install -c conda-forge julia=1.6.3
+Ou, então, instale a versão 1.5 manualmente.
+
+8°. Clone o projeto t2vec
+$ cd ~/.conda/envs/porto
+$ git clone https://github.com/boathit/t2vec.git
+$ ls
+$ cd t2vec/data/
+
+9°. Faça o download do dataset da porto e depois adicione-o dentro de /data:
+$ curl http://archive.ics.uci.edu/ml/machine-learning-databases/00339/train.csv.zip -o data/porto.csv.zip$ cd data/
+$ unzip porto.csv.zip
+$ mv train.csv porto.csv
+$ rm -fv porto.csv.zip
+$ ls
+
+10°. Faça as seguintes modificações de arquivos:
+$ cd ..
+a) Em pkg-install.jl:
+Comente --> Pkg.add("IJulia") --> #Pkg.add("IJulia")
+Adicione a linha --> Pkg.add("ArgParse")
+$ cd preprocessing/
+
+b) Em porto2h5.jl
+Atualize --> default="/home/xiucheng/Github/t2vec/data" Para --> default="/home/jupyter-wilken.dantas@ufc.-af1ea/.conda/envs/porto/t2vec/data"
+
+c) Em preprocess.jl:
+Atualize --> default="/home/xiucheng/Github/t2vec/data" Para --> default="/home/jupyter-wilken.dantas@ufc.-af1ea/.conda/envs/porto/t2vec/data"
+
+d) Em utils.jl, linha 121:
+Atualize --> dropping_rates = [0, 0.2, 0.4, 0.5, 0.6] Para --> dropping_rates = [0, 0.2, 0.4, 0.6]
+Obs: Etapa importante, pois formará somente os 16 pares de treino, como dito no artigo e não feito no código deles!
+$ cd ..
+
+e) Em t2vec.py:
+linha 18:
+Atualize --> parser.add_argument("-data", default="/home/xiucheng/Github/t2vec/data", help="Path to training and validating data") Para --> parser.add_argument("-data", default="/home/jupyter-wilken.dantas@ufc.-af1ea/.conda/envs/porto/t2vec/data", help="Path to training and validating data")
+
+linha 21: 
+Atualize --> parser.add_argument("-checkpoint", default="/home/xiucheng/Github/t2vec/data/checkpoint.pt", help="The saved checkpoint") Para --> parser.add_argument("-checkpoint", default="/home/jupyter-wilken.dantas@ufc.-af1ea/.conda/envs/porto/t2vec/data/checkpoint.pt", help="The saved checkpoint")
+
+11°. Instale as seguintes bibliotecas:
+$ pip install funcy
+$ pip install h5py
+
+12°. Instale os pacotes adicionais Julia:
+$ julia pkg-install.jl
+
+13°. Execute os pré-processamentos:
+$ cd preprocessing/
+$ julia porto2h5.jl
+$ julia preprocess.jl
+
+14°. Agora execute o treino:
+$ python t2vec.py -vocab_size 18866 -criterion_name "KLDIV" -knearestvocabs "data/porto-vocab-dist-cell100.h5"
+
+15°. Para obtenção dos resultados, passe o notebook t2vec.ipnyp para um arquivo Julia (exp1.jl):
+$ cd experiments/
+$ vim exp1.jl
+Obs: Em seguida, atualize as linhas:
+8, 65 e 67 Para --> "/home/jupyter-wilken.dantas@ufc.-af1ea/.conda/envs/porto/t2vec/data"
+Obs: No diretório corrente há uma cópia do arquivo exp1.jl.
+
+16°. Finalmente, execute o arquivo exp1.jl para obter os resultados!
+$ julia exp1.jl
